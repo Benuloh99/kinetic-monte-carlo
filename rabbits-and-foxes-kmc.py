@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.5
+#       jupytext_version: 1.19.1
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -134,12 +134,6 @@ plt.show()
 # foxes against time, on top of the ODE solution. (`plt.step(times, foxes, where="post")`
 # draws a population that jumps, rather than one that slopes.) Run it a few more times
 # with different seeds. How does a KMC trajectory differ from the ODE solution?
-#
-# **(c) Check the clock.** From one trajectory's arrays, work out each waiting time
-# $\Delta t$ (`np.diff(times)`) and the total rate $Q$ of the state *before* each event.
-# If your clock is right, $x = Q\,\Delta t$ is exponentially distributed with mean 1.
-# Plot a histogram of $x$ (`density=True`) with $e^{-x}$ on top. What is the mean of $x$?
-# What would the histogram look like if you had advanced the clock by $1/Q$ every step?
 
 # %%
 
@@ -250,6 +244,16 @@ plt.show()
 # Make a copy that runs 10,000 trajectories and saves the second-peak times and heights
 # and the extinction times with `np.savetxt`, and run it as a batch job on Explorer,
 # as in Lecture 9. Do your answers to tasks 4 and 5 hold up?
+#
+# **(c) Is the random clock worth it?** Wikipedia notes that advancing the clock by
+# $\Delta t = 1/Q_k$ every step, instead of an exponentially distributed $\Delta t$, gives
+# "the same *average* time scale" (and that note is marked *citation needed*). Test it.
+# Make a copy of your `kmc` function that uses $\Delta t = 1/Q$, and run both versions
+# many times. Compare the probability that the foxes die out by day 600, the fraction of
+# runs with a second peak, and the mean time and height of that peak, each with its
+# standard error. Which differences are bigger than their uncertainty? How many runs did
+# you need before you could tell? (Several thousand of each; (a) and (b) help.) Why might
+# some quantities change and others not?
 
 # %%
 
