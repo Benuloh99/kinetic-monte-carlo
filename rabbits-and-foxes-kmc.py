@@ -38,7 +38,7 @@
 # treat every rabbit and fox as an individual, and every birth and death as a random
 # event. That is **kinetic Monte Carlo** (KMC).
 #
-# ### The rejection-free algorithm
+# ### The events
 #
 # There are four events. Each has a rate, in events per day, which changes as the
 # populations change:
@@ -50,16 +50,10 @@
 # | a fox is born | $k_3 R F$ | $F \to F + 1$ |
 # | a fox dies | $k_4 F$ | $F \to F - 1$ |
 #
-# Then, over and over until you reach the end time:
-#
-# 1. Work out the four rates $r_i$, and their total $r_\text{tot}$.
-# 2. **Which event?** Choose event $i$ with probability $r_i / r_\text{tot}$. (Draw
-#    $u_1$ uniformly on $[0, 1)$, and pick the first event whose cumulative rate is
-#    larger than $u_1 r_\text{tot}$.)
-# 3. **When?** The waiting time to the next event is exponentially distributed with
-#    mean $1/r_\text{tot}$. Draw $u_2$ uniformly on $(0, 1]$ and advance the clock by
-#    $\Delta t = -\ln(u_2) / r_\text{tot}$.
-# 4. Apply the event, and record the time and the populations.
+# The rates are easy to calculate, so we use the **rejection-free** algorithm, which you
+# worked out in class from
+# [Wikipedia's Kinetic Monte Carlo page](https://en.wikipedia.org/wiki/Kinetic_Monte_Carlo).
+# Writing it down in your own words is the first part of task 1.
 #
 # ### How to work
 #
@@ -69,8 +63,12 @@
 # - **Answer the questions in words**, in the markdown cells marked *Answer*.
 #   Double-click a cell to edit it.
 # - **Random numbers:** use a NumPy generator, `rng = np.random.default_rng(seed)`,
-#   and `rng.random()` for a uniform number. Give it a seed, so that Restart & Run All
-#   gives the same answers every time.
+#   not the legacy `np.random.*` functions. Give it a seed, so that Restart & Run All
+#   gives the same answers every time. Check what interval each function returns,
+#   and what its arguments mean, before you trust it.
+# - **Let bugs shout.** If a population goes negative or an event isn't one of the
+#   four, `raise` an error. Don't hide it with `max(0, F)`: that turns a bug you'd
+#   notice into a wrong answer you won't.
 
 # %%
 import time
@@ -110,7 +108,18 @@ plt.show()
 # %% [markdown]
 # ## 1. One trajectory
 #
-# Write a function
+# **(a) The algorithm, in your own words.** Before you write any code, write the
+# rejection-free algorithm as numbered steps, for rabbits and foxes: what each of
+# Wikipedia's symbols ($k$, $r_{ki}$, $R_{ki}$, $Q_k$, $u$, $u'$) becomes here, how the
+# next event is chosen, and how far the clock moves. Then work the **first step by
+# hand**, from 400 rabbits and 200 foxes, with $u = 0.5$ and $u' = 0.3$: which event
+# happens, and how many minutes pass?
+
+# %% [markdown]
+# *Answer:*
+
+# %% [markdown]
+# **(b) The function.** Write
 #
 # ```python
 # def kmc(R0, F0, t_end, rng):
@@ -118,13 +127,19 @@ plt.show()
 #     return times, rabbits, foxes   # three NumPy arrays, one entry per event
 # ```
 #
-# that runs the algorithm above from $t = 0$ until the clock passes `t_end`. If the
-# total rate is ever zero, nothing more can happen, so stop there.
+# that runs your algorithm from $t = 0$ until the clock passes `t_end`. If the total
+# rate is ever zero, nothing more can happen, so stop there.
 #
 # Run it once. How many events were there, and how long did it take? Plot rabbits and
 # foxes against time, on top of the ODE solution. (`plt.step(times, foxes, where="post")`
 # draws a population that jumps, rather than one that slopes.) Run it a few more times
 # with different seeds. How does a KMC trajectory differ from the ODE solution?
+#
+# **(c) Check the clock.** From one trajectory's arrays, work out each waiting time
+# $\Delta t$ (`np.diff(times)`) and the total rate $Q$ of the state *before* each event.
+# If your clock is right, $x = Q\,\Delta t$ is exponentially distributed with mean 1.
+# Plot a histogram of $x$ (`density=True`) with $e^{-x}$ on top. What is the mean of $x$?
+# What would the histogram look like if you had advanced the clock by $1/Q$ every step?
 
 # %%
 
