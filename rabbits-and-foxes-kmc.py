@@ -59,7 +59,10 @@
 #
 # - **Commit as you go.** After each numbered task works, Restart & Run All, then
 #   stage, commit with a message that says what you did, and push. At least one commit
-#   per task. Your commit history is part of what gets looked at.
+#   per task. Your commit history is part of what gets looked at. **Commit the `.ipynb`
+#   and its paired `.py` together**: the `.py` is the one whose diffs you can read on
+#   GitHub. If saving the notebook doesn't update the `.py`, see *Setting up Jupytext* on
+#   Canvas.
 # - **Answer the questions in words**, in the markdown cells marked *Answer*.
 #   Double-click a cell to edit it.
 # - **Random numbers:** use a NumPy generator, `rng = np.random.default_rng(seed)`,
