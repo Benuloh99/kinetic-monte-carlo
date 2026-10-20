@@ -120,7 +120,6 @@ plt.show()
 
 # %% [markdown]
 # *Answer:*
-
 # %% [markdown]
 # **(b) The function.** Write
 #
