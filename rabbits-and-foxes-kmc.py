@@ -6,7 +6,7 @@
 #       extension: .py
 #       format_name: percent
 #       format_version: '1.3'
-#       jupytext_version: 1.19.1
+#       jupytext_version: 1.19.6
 #   kernelspec:
 #     display_name: Python 3 (ipykernel)
 #     language: python
@@ -75,7 +75,7 @@
 
 # %%
 import time
-
+import math
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.integrate import solve_ivp
@@ -108,6 +108,7 @@ plt.ylabel("population")
 plt.legend()
 plt.show()
 
+
 # %% [markdown]
 # ## 1. One trajectory
 #
@@ -120,6 +121,16 @@ plt.show()
 
 # %% [markdown]
 # *Answer:*
+#
+# 1(a). Rejection-free algorithm and first step
+# 1. Set the clock to zero and the state $k=(R,F)=(400,200)$.
+# 2. The four $r_{ki}$ are $(k_1R,k_2RF,k_3RF,k_4F)$. Their cumulative sums $R_{ki}$ define four intervals, with total rate $Q_k=\sum_i r_{ki}$. If $Q_k=0$, stop.
+# 3. Draw independent uniforms $u,u'$ in $(0,1]$. Select the first cumulative rate at least $uQ_k$, then change the corresponding population by one.
+# 4. Advance the clock by $\Delta t=-\ln(u')/Q_k$, using the total rate before the population changed. Record the new state and repeat until the clock exceeds 600 days.
+# Initially the rates are $(6,3.2,32,8)$ events/day, the cumulative rates are $(6,9.2,41.2,49.2)$, and $Q=49.2$. With $u=0.5$, $uQ=24.6$, so a fox is born, giving $(R,F)=(400,201)$. With $u'=0.3$,
+# $$\Delta t=\frac{-\ln(0.3)}{49.2}=0.02447099\text{ day}=\mathbf{35.2382\text{ minutes}}$$.
+#
+
 # %% [markdown]
 # **(b) The function.** Write
 #
@@ -138,9 +149,52 @@ plt.show()
 # with different seeds. How does a KMC trajectory differ from the ODE solution?
 
 # %%
+def kmc(R0, F0, t_end, rng):
+    if (not isinstance(R0, (int, np.integer)) or
+        not isinstance(F0, (int, np.integer)) or R0 < 0 or F0 < 0):
+        raise ValueError('Initial populations must be nonnegative integers')
+    if not np.isfinite(t_end) or t_end < 0:
+        raise ValueError('t_end must be finite and nonnegative')
+    t, R, F = 0.0, int(R0), int(F0)
+    times, rabbits, foxes = [t], [R], [F]
+    while t < t_end:
+        a, b, c, d = k1*R, k2*R*F, k3*R*F, k4*F
+        Q = a+b+c+d
+        if Q == 0:
+            break
+        x = (1.0-rng.random())*Q
+        dt = -math.log(1.0-rng.random())/Q
+        if x <= a:
+            R += 1
+        elif x <= a+b:
+            R -= 1
+        elif x <= a+b+c:
+            F += 1
+        elif x <= Q:
+            F -= 1
+        else:
+            raise RuntimeError('Invalid event')
+        if R < 0 or F < 0:
+            raise RuntimeError('Negative population')
+        t += dt
+        times.append(t); rabbits.append(R); foxes.append(F)
+    return np.array(times), np.array(rabbits), np.array(foxes)
+
+start = time.perf_counter()
+times, rabbits, foxes = kmc(R0, F0, t_end, np.random.default_rng(5137))
+single_elapsed = time.perf_counter()-start
+print(f'{len(times)-1:,} events; {single_elapsed:.4f} seconds')
+fig, ax = plt.subplots(figsize=(9,4))
+ax.plot(t_ode, R_ode, '--', label='rabbits ODE')
+ax.plot(t_ode, F_ode, '--', label='foxes ODE')
+ax.step(times, rabbits, where='post', lw=.8, label='rabbits KMC')
+ax.step(times, foxes, where='post', lw=.8, label='foxes KMC')
+ax.set(xlim=(0,600), xlabel='time (days)', ylabel='population')
+ax.legend(); plt.tight_layout(); plt.show()
 
 # %% [markdown]
 # *Answer:*
+# The initial array entry is the initial condition; every later entry is an event. The final event may be after day 600, as requested. Values at day 600 must use the last event at or before day 600. KMC populations are integers and change in jumps. Their peaks and troughs vary in size and timing, and a species can go extinct; the deterministic solution remains smooth and positive.
 
 # %% [markdown]
 # ## 2. Many trajectories, and where they end up
@@ -155,9 +209,22 @@ plt.show()
 #   task 5 of the `solve_ivp` homework is relevant.)
 
 # %%
+fig, ax = plt.subplots(figsize=(9,4))
+twenty = []
+for seed in range(20):
+    ts, rs, fs = kmc(R0, F0, t_end, np.random.default_rng(1000+seed))
+    twenty.append((ts, rs, fs))
+    ax.step(ts, fs, where='post', lw=.5, alpha=.7)
+ax.plot(t_ode, F_ode, 'k', lw=2, label='ODE')
+ax.set(xlim=(0,600), xlabel='time (days)', ylabel='foxes')
+ax.legend(); plt.tight_layout(); plt.show()
+
 
 # %% [markdown]
 # *Answer:*
+# The trajectories have a similar early fox boom and subsequent decline. They spread apart most strongly near the low-population trough and during recovery: chance deaths can eliminate the last few foxes, and surviving foxes restart growth at different times.
+# At $F=0$, both fox birth and fox death rates vanish permanently, and rabbits undergo pure birth. At $R=0$, both rabbit birth and consumption vanish permanently; fox births also stop, so the remaining foxes eventually die. Without immigration, neither extinct species can return.
+# Fox extinction tends to occur after the first boom, when rabbits are scarce and the fox population has declined to a few individuals. Fox per-capita growth is $k_3R-k_4$, which is negative below $R=100$. Even when rabbits recover, a small fox population can still disappear by chance before it establishes growth.
 
 # %% [markdown]
 # ## 3. The second fox peak
@@ -180,9 +247,104 @@ plt.show()
 # call "the second peak", if you can.
 
 # %%
+def second_peak(times, foxes):
+    times, foxes = np.asarray(times), np.asarray(foxes)
+    if len(times) != len(foxes) or len(times) == 0:
+        raise ValueError('Need equally sized nonempty arrays')
+    # Include the state carried into day 200, because the path is a step function.
+    j = np.searchsorted(times, 200.0, side='right')-1
+    if j < 0:
+        raise ValueError('Trajectory must start at or before day 200')
+    mask = (times > 200) & (times <= 600)
+    tt = np.r_[200.0, times[mask]]
+    ff = np.r_[foxes[j], foxes[mask]]
+    i = int(np.argmax(ff))  # earliest occurrence resolves ties
+    if ff[i] > 100 and 205 < tt[i] < 595:
+        return float(tt[i]), int(ff[i])
+    return None
+
+def fox_summary(rng, mean_clock=False):
+    # Same event process, but no full trajectory or post-extinction rabbit births.
+    t, R, F = 0.0, R0, F0
+    peak_t, peak_f = 200.0, -1
+    extinction = np.nan
+    events = 0
+    rand = rng.random
+    while t < 600 and F > 0:
+        a, b, c, d = k1*R, k2*R*F, k3*R*F, k4*F
+        Q = a+b+c+d
+        if Q == 0:
+            break
+        x = (1-rand())*Q
+        clock_draw = 1-rand()
+        dt = 1/Q if mean_clock else -math.log(clock_draw)/Q
+        new_t = t+dt
+        if t <= 200 <= new_t and peak_f < 0:
+            peak_t, peak_f = 200.0, F
+        if new_t > 600:
+            break
+        if x <= a: R += 1
+        elif x <= a+b: R -= 1
+        elif x <= a+b+c: F += 1
+        elif x <= Q: F -= 1
+        else: raise RuntimeError('Invalid event')
+        if R < 0 or F < 0: raise RuntimeError('Negative population')
+        t = new_t
+        events += 1
+        if 200 < t <= 600 and F > peak_f:
+            peak_t, peak_f = t, F
+        if F == 0:
+            extinction = t
+    valid = peak_f > 100 and 205 < peak_t < 595
+    return (peak_t if valid else np.nan,
+            peak_f if valid else np.nan, extinction, events)
+
+def ensemble(N, seed):
+    return np.array([fox_summary(np.random.default_rng(s))
+                     for s in np.random.SeedSequence(seed).spawn(N)])
+
+def describe(data):
+    peaks = data[np.isfinite(data[:,0]), :2]
+    n = len(peaks)
+    return dict(n=n, fraction=n/len(data), mean=peaks.mean(axis=0),
+                median=np.median(peaks,axis=0),
+                iqr=np.percentile(peaks,[25,75],axis=0),
+                se=peaks.std(axis=0,ddof=1)/np.sqrt(n))
+
+# Verify the summary optimization against full paths, including the time boundary.
+for seed in range(10):
+    ts, rs, fs = kmc(R0,F0,600,np.random.default_rng(seed))
+    summary = fox_summary(np.random.default_rng(seed))
+    expected = second_peak(ts,fs)
+    assert (expected is None and np.isnan(summary[0])) or np.allclose(expected,summary[:2])
+    deaths = ts[(fs == 0) & (ts <= 600)]
+    assert (not len(deaths) and np.isnan(summary[2])) or (len(deaths) and deaths[0] == summary[2])
+assert second_peak([0,210,601],[0,150,1000]) == (210.0,150)
+assert second_peak([0,204,210],[0,150,140]) is None
+assert second_peak([0,250,300],[0,100,0]) is None
+
+start = time.perf_counter()
+data100 = ensemble(100, 3005137)
+elapsed100 = time.perf_counter()-start
+stats100 = describe(data100)
+print('100-run statistics:', stats100)
+print(f'Timing: {elapsed100:.2f} s for 100; projected 3000: {30*elapsed100:.1f} s')
+fig, axs = plt.subplots(1,2,figsize=(10,3.5))
+# Calculate or set the known ODE second peak reference values
+ode_peak_time = t_ode[np.argmax(F_ode[t_ode > 200])] + 200  # or use the approximate value ~428
+ode_peak_height = float(np.max(F_ode[t_ode > 200]))          # approximately 2804
+for j,(label,ode_value) in enumerate(zip(['peak time (days)','peak height (foxes)'],[ode_peak_time,ode_peak_height])):
+    axs[j].hist(data100[:,j][np.isfinite(data100[:,j])],bins=12,edgecolor='white')
+    axs[j].axvline(ode_value,color='k',ls='--',label='ODE')
+    axs[j].set(xlabel=label,ylabel='count'); axs[j].legend()
+plt.tight_layout(); plt.show()
+
 
 # %% [markdown]
 # *Answer:*
+# In the independent 100-run sample, 30/100 (30%) have a defined second peak. Time: mean 400.7 days, median 397.3 days, IQR 377.9–421.4 days. Height: mean 2384, median 2348, IQR 2131–2628 foxes. Compare with the ODE peak at day 427.8, height 2804.
+# These statistics are conditional on the defined peak existing. Extinction removes some paths, random fluctuations change the timing and size of recovery, and nonlinear rates mean that ensemble averages need not satisfy the ODE: $E[RF] \ne E[R]E[F]$.
+# The definition is a window maximum, not a cycle counter or a test for a local maximum. It can select a later cycle, a transient spike, or a high point on an unfinished rising branch. It can also reject a real peak close to a window boundary, or below 101 foxes. Tied maxima require a convention; here the first occurrence wins. The maximum is found across the whole window before applying the boundary exclusion.
 
 # %% [markdown]
 # ## 4. How many runs are enough?
