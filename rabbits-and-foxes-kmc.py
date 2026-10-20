@@ -226,6 +226,8 @@ ax.legend(); plt.tight_layout(); plt.show()
 # At $F=0$, both fox birth and fox death rates vanish permanently, and rabbits undergo pure birth. At $R=0$, both rabbit birth and consumption vanish permanently; fox births also stop, so the remaining foxes eventually die. Without immigration, neither extinct species can return.
 # Fox extinction tends to occur after the first boom, when rabbits are scarce and the fox population has declined to a few individuals. Fox per-capita growth is $k_3R-k_4$, which is negative below $R=100$. Even when rabbits recover, a small fox population can still disappear by chance before it establishes growth.
 
+# %%
+
 # %% [markdown]
 # ## 3. The second fox peak
 #
@@ -330,9 +332,11 @@ stats100 = describe(data100)
 print('100-run statistics:', stats100)
 print(f'Timing: {elapsed100:.2f} s for 100; projected 3000: {30*elapsed100:.1f} s')
 fig, axs = plt.subplots(1,2,figsize=(10,3.5))
-# Calculate or set the known ODE second peak reference values
-ode_peak_time = t_ode[np.argmax(F_ode[t_ode > 200])] + 200  # or use the approximate value ~428
-ode_peak_height = float(np.max(F_ode[t_ode > 200]))          # approximately 2804
+# Find the second peak from the ODE solution after day 200
+ode_mask = t_ode > 200
+ode_peak_idx = np.argmax(F_ode[ode_mask])
+ode_peak_time = t_ode[ode_mask][ode_peak_idx]
+ode_peak_height = F_ode[ode_mask][ode_peak_idx]
 for j,(label,ode_value) in enumerate(zip(['peak time (days)','peak height (foxes)'],[ode_peak_time,ode_peak_height])):
     axs[j].hist(data100[:,j][np.isfinite(data100[:,j])],bins=12,edgecolor='white')
     axs[j].axvline(ode_value,color='k',ls='--',label='ODE')
