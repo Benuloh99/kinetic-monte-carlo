@@ -419,9 +419,29 @@ print(f'Successfully saved to {output_filename}')
 #   happen?
 
 # %%
+extinct = np.isfinite(data3000[:,2])
+N = len(data3000)
+p = extinct.mean()
+p_se = np.sqrt(p*(1-p)/N)
+print(f'{extinct.sum()} / {N} extinct; p={p:.6f}, SE={p_se:.6f}')
+for eps in [.01,.001]:
+    need = math.ceil(p*(1-p)/eps**2)
+    need95 = math.ceil(1.96**2*p*(1-p)/eps**2)
+    worst = math.ceil(.25/eps**2)
+    print(f'+/- {100*eps:g} percentage points: {need:,} runs (1 SE), '
+          f'{need95:,} (approx 95%); worst-case 1-SE requirement {worst:,}')
+extinction_quartiles = np.percentile(data3000[extinct,2],[25,50,75])
+print('Extinction time quartiles (conditional on extinction by day 600):',extinction_quartiles)
+fig, ax = plt.subplots(figsize=(8,3.5))
+ax.hist(data3000[extinct,2],bins=np.arange(0,621,20),edgecolor='white')
+ax.set(xlabel='fox extinction time (days)',ylabel='count')
+plt.tight_layout(); plt.show()
+
 
 # %% [markdown]
 # *Answer:*
+# The estimated probability of fox extinction by day 600 is 69.2% ± 0.8 percentage points (one SE); an approximate 95% interval is 67.6%–70.9%. Conditional extinction-time quartiles are 246, 268, 295 days, consistent with losses around the low-fox trough after the initial boom. The histogram shows whether any later losses also occur.
+# The requested ± accuracies are ambiguous without a confidence level. The code gives both one-standard-error and approximate 95% requirements. The plug-in estimates assume the true probability is close to the measured fraction; a conservative bound uses $p(1-p)\leq 1/4$ (2,500 and 250,000 runs for one SE; 9,604 and 960,400 for approximate 95%). The histogram includes only extinction events by day 600, with surviving paths censored.
 
 # %% [markdown]
 # ## 6. Your project
