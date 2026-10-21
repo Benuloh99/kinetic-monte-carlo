@@ -365,9 +365,45 @@ plt.tight_layout(); plt.show()
 #   ranges, to a precision you can justify. Say how you justified it.
 
 # %%
+import time
+
+start = time.perf_counter()
+data3000 = ensemble(3000, 4005137)
+ensemble_elapsed = time.perf_counter() - start
+
+print(f'3000 runs took {ensemble_elapsed:.2f} s')
+print('N | peaks | fraction | mean time +/- SE | mean height +/- SE')
+for N in [100, 300, 1000, 3000]:
+    s = describe(data3000[:N])
+    print(
+        f"{N:4} | {s['n']:4} | {s['fraction']:.3f} | "
+        f"{s['mean'][0]:.2f} +/- {s['se'][0]:.2f} | "
+        f"{s['mean'][1]:.1f} +/- {s['se'][1]:.1f}"
+    )
+
+final_stats = describe(data3000)
+print('Final conditional statistics:', final_stats)
+
+# Fix: ensure a fresh write by using 'w' and handling potential stale handles
+import os
+
+output_filename = 'kmc_3000_output.csv'
+if os.path.exists(output_filename):
+    os.remove(output_filename)
+
+np.savetxt(
+    output_filename,
+    data3000,
+    delimiter=',',
+    header='peak_time_days,peak_height_foxes,fox_extinction_day,events_before_stop',
+    comments='',
+)
+print(f'Successfully saved to {output_filename}')
 
 # %% [markdown]
 # *Answer:*
+# Of the 3,000 runs, 984 have a defined peak. Conditional expected peak time is approximately 399 days (SE 1.02 days), with IQR approximately 376–418 days. Conditional expected height is approximately 2360 foxes (SE 19.6), with IQR approximately 1930–2700 foxes. These rounded precisions reflect the sampling errors, not the raw number of digits printed by Python.
+# The means fluctuate rather than moving monotonically toward a limit. For independent trajectories of finite variance, the standard error is $s/\sqrt{n}$, so four times as many accepted peaks approximately halves the uncertainty. These SEs describe sampling error of the mean, whereas the IQR describes the variability of individual trajectories. Quartiles have their own sampling uncertainty and are reported approximately.
 
 # %% [markdown]
 # ## 5. How likely is it that the foxes die out?
