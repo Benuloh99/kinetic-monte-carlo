@@ -455,6 +455,7 @@ plt.tight_layout(); plt.show()
 
 # %% [markdown]
 # *Answer:*
+# A project I was thinking of involves catalytic nanoparticles with only a few active surface sites. An ODE for mean coverage could predict a small positive adsorbate population even though an individual particle often has no adsorbates and cannot react until another molecule arrives. A KMC model could include adsorption at rate $k_{ads}P N_{empty}$, desorption at rate $k_{des}N_{ads}$, and surface reaction at rate $k_{rxn}N_{reactive\ pairs}$, with site occupancies updated one event at a time. This would capture fluctuations, blocked sites, and intervals with no reaction that a mean coverage model can miss.
 
 # %% [markdown]
 # ## Stretch problems
@@ -489,3 +490,7 @@ plt.tight_layout(); plt.show()
 # Restart & Run All. Check that every cell ran, in order, with no errors. Commit and
 # push. Then check on GitHub that your fork shows your latest commit, and that the
 # notebook displays with its plots.
+
+# %%
+
+# %%
